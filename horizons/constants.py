@@ -21,9 +21,10 @@
 # ###################################################
 
 import ctypes
-import platform
 import os
 import os.path
+import platform
+import subprocess
 
 from horizons.ext.enum import Enum
 
@@ -34,33 +35,37 @@ possible and instead import the proper classes of this file.
 
 ##Versioning
 class VERSION:
-	def _get_git_version():
-		"""Function gets latest revision of the working copy.
-		It only works in git repositories, and is actually a hack.
-		"""
+	def _git_describe():
+		from run_uh import get_content_dir_parent_path
+		git = "git"
+		if platform.system() == "Windows":
+			git = "git.exe" # could anyone test and confirm this works
+		# Note that this uses glob patterns, not regular expressions.
+		TAG_STRUCTURE = "20[0-9][0-9].[0-9]*"
+		describe = [git, "describe", "--tags", "--match", TAG_STRUCTURE]
 		try:
-			from run_uh import get_content_dir_parent_path
 			uh_path = get_content_dir_parent_path()
-			git_head_path = os.path.join(uh_path, '.git', 'HEAD')
-			if os.path.exists(git_head_path):
+			return subprocess.check_output(describe, cwd=uh_path)
+		except (subprocess.CalledProcessError, RuntimeError):
+			# Something went wrong - try to manually extract current commit hash.
+			try:
+				git_head_path = os.path.join(uh_path, '.git', 'HEAD')
 				head = open(git_head_path).readline().strip().partition(' ')
 				if head[2]:
 					head_file = os.path.join(uh_path, '.git', head[2])
 				else:
 					head_file = git_head_path
-				if os.path.exists(head_file):
-					return unicode(open(head_file).readline().strip()[0:7])
-		#if there is no .git directory then check for gitversion.txt
-		except ImportError:
-			try:
-				return unicode(open(os.path.join("content", "packages", "gitversion.txt")).read())
+				return unicode(open(head_file).readline().strip()[0:7])
 			except IOError:
-				return u"<unknown>"
-
-		return u"<unknown>"
+				# If there is no .git directory, try to find gitversion.txt or bail.
+				try:
+					gitversion = os.path.join("content", "packages", "gitversion.txt")
+					return unicode(open(gitversion).read())
+				except IOError:
+					return u"<unknown>"
 
 	RELEASE_NAME    = "Unknown Horizons %s"
-	RELEASE_VERSION = _get_git_version()
+	RELEASE_VERSION = _git_describe()
 	# change for release:
 	IS_DEV_VERSION = True
 	#RELEASE_VERSION = u'2013.3'
