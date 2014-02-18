@@ -69,6 +69,8 @@ class PickBeltWidget(object):
 
 	def update_view(self, number=0):
 		for page in self.page_widgets.values():
+			# set visible state to True before hide call is possible
+			page.show()
 			page.hide()
 		self.page_widgets[number].show()
 		# Setup the pickbelts according to selection
