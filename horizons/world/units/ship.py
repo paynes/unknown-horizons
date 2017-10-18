@@ -36,6 +36,7 @@ from horizons.util.pathfinding.pather import FisherShipPather, ShipPather
 from horizons.world.traderoute import TradeRoute
 from horizons.world.units.collectors import FisherShipCollector
 from horizons.world.units.unit import Unit
+from horizons.world.units.movingobject import MovingObject
 
 
 class Ship(Unit):
@@ -92,6 +93,23 @@ class Ship(Unit):
 		ShipDestroyed.broadcast(self)
 		super(Ship, self).remove()
 
+	@MovingObject.position.setter
+	def position(self, position):
+		if self.in_ship_map and self.position.to_tuple() in self.session.world.ship_map:
+			del self.session.world.ship_map[self.position.to_tuple()]
+		elif self.in_ship_map:  # logging purposes only
+			self.log.error("Ship %s had in_ship_map flag set as True but tuple %s was "
+			               "not found in world.ship_map", self, self.position.to_tuple())
+
+		if self.in_ship_map and self._next_target.to_tuple() in self.session.world.ship_map:
+			del self.session.world.ship_map[self._next_target.to_tuple()]
+
+		self._position = position
+		self.session.world.ship_map[self._position.to_tuple()] = weakref.ref(self)
+
+		if self._next_target is not None:
+			self.session.world.ship_map[self._next_target.to_tuple()] = weakref.ref(self)
+
 	def create_route(self):
 		self.route = TradeRoute(self)
 
@@ -100,11 +118,11 @@ class Ship(Unit):
 
 		# TODO: Originally, only self.in_ship_map should suffice here,
 		# but KeyError is raised during combat.
-		if self.in_ship_map and self.position.to_tuple() in self.session.world.ship_map:
-			del self.session.world.ship_map[self.position.to_tuple()]
-		elif self.in_ship_map:  # logging purposes only
-			self.log.error("Ship %s had in_ship_map flag set as True but tuple %s was "
-			               "not found in world.ship_map", self, self.position.to_tuple())
+		#if self.in_ship_map and self.position.to_tuple() in self.session.world.ship_map:
+		#	del self.session.world.ship_map[self.position.to_tuple()]
+		#if self.in_ship_map:  # logging purposes only
+		#	self.log.error("Ship %s had in_ship_map flag set as True but tuple %s was "
+		#	               "not found in world.ship_map", self, self.position.to_tuple())
 
 		try:
 			super(Ship, self)._move_tick(resume)
@@ -118,7 +136,7 @@ class Ship(Unit):
 
 		if self.in_ship_map:
 			# save current and next position for ship, since it will be between them
-			self.session.world.ship_map[self.position.to_tuple()] = weakref.ref(self)
+			#self.session.world.ship_map[self.position.to_tuple()] = weakref.ref(self)
 			self.session.world.ship_map[self._next_target.to_tuple()] = weakref.ref(self)
 
 	def _movement_finished(self):

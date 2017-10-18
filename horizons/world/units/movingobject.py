@@ -70,7 +70,7 @@ class MovingObject(ComponentHolder, ConcreteObject):
 		self.__init(x, y)
 
 	def __init(self, x, y):
-		self.position = Point(x, y)
+		self._position = Point(x, y)
 		self.last_position = Point(x, y)
 		self._next_target = Point(x, y)
 
@@ -86,6 +86,14 @@ class MovingObject(ComponentHolder, ConcreteObject):
 		self._exact_model_coords2 = fife.ExactModelCoordinate() # save instance since construction is expensive (no other purpose)
 		self._fife_location1 = None
 		self._fife_location2 = None
+
+	@property
+	def position(self):
+		return self._position
+
+	@position.setter
+	def position(self, position):
+		self._position = position
 
 	def check_move(self, destination):
 		"""Tries to find a path to destination
